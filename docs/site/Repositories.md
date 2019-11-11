@@ -335,7 +335,7 @@ instance. By default, the configuration is loaded from
 ```ts
 import {inject} from '@loopback/core';
 import {juggler, AnyObject} from '@loopback/repository';
-import * as config from './redis.datasource.config.json';
+import config from './redis.datasource.config.json';
 
 export class RedisDataSource extends juggler.DataSource {
   static dataSourceName = 'redis';

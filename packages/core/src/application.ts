@@ -11,7 +11,7 @@ import {
   createBindingFromClass,
   Provider,
 } from '@loopback/context';
-import * as debugFactory from 'debug';
+import debugFactory from 'debug';
 import {Component, mountComponent} from './component';
 import {CoreBindings, CoreTags} from './keys';
 import {

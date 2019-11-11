@@ -11,10 +11,10 @@ import {
   skipOnTravis,
   supertest,
 } from '@loopback/testlab';
-import * as fs from 'fs';
+import fs from 'fs';
 import {IncomingMessage, Server, ServerResponse} from 'http';
-import * as os from 'os';
-import * as path from 'path';
+import os from 'os';
+import path from 'path';
 import {HttpOptions, HttpServer, HttpsOptions} from '../../';
 
 describe('HttpServer (integration)', () => {
