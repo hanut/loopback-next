@@ -339,13 +339,18 @@ export class DefaultCrudRepository<
   }
 
   async create(entity: DataObject<T>, options?: Options): Promise<T> {
-    const model = await ensurePromise(this.modelClass.create(entity, options));
+    const model = await ensurePromise(
+      this.modelClass.create(this.ensurePersistable(entity), options),
+    );
     return this.toEntity(model);
   }
 
   async createAll(entities: DataObject<T>[], options?: Options): Promise<T[]> {
     const models = await ensurePromise(
-      this.modelClass.create(entities, options),
+      this.modelClass.create(
+        entities.map(e => this.ensurePersistable(e)),
+        options,
+      ),
     );
     return this.toEntities(models);
   }
@@ -426,7 +431,7 @@ export class DefaultCrudRepository<
   ): Promise<Count> {
     where = where || {};
     const result = await ensurePromise(
-      this.modelClass.updateAll(where, data, options),
+      this.modelClass.updateAll(where, this.ensurePersistable(data), options),
     );
     return {count: result.count};
   }
@@ -451,7 +456,8 @@ export class DefaultCrudRepository<
     options?: Options,
   ): Promise<void> {
     try {
-      await ensurePromise(this.modelClass.replaceById(id, data, options));
+      const payload = this.ensurePersistable(data, {replacement: true});
+      await ensurePromise(this.modelClass.replaceById(id, payload, options));
     } catch (err) {
       if (err.statusCode === 404) {
         throw new EntityNotFoundError(this.entityClass, id);
@@ -526,6 +532,50 @@ export class DefaultCrudRepository<
     options?: Options,
   ): Promise<(T & Relations)[]> {
     return includeRelatedModels<T, Relations>(this, entities, include, options);
+  }
+
+  /** Converts an entity object to a JSON object to check if it contains navigational property.
+   * Throws an error if `entity` contains navigational property.
+   * Also removed id property  for replaceById operation (mongo use case).
+   *
+   * @param entity
+   * @param options when attributw replacement is set to true, delete the id property to operate
+   * replaceById method.
+   */
+  protected ensurePersistable<R extends T>(
+    entity: R | DataObject<R>,
+    options: {replacement?: boolean; idProperty?: string} = {},
+  ): legacy.ModelData<legacy.PersistedModel> {
+    // FIXME(bajtos) Ideally, we should call toJSON() to convert R to data object
+    // Unfortunately that breaks replaceById for MongoDB connector, where we
+    // would call replaceId with id *argument* set to ObjectID value but
+    // id *property* set to string value.
+    /*
+    const data: AnyObject =
+      typeof entity.toJSON === 'function' ? entity.toJSON() : {...entity};
+    */
+
+    // proposal solution from agnes: delete the id property in the target dtat
+    // when runs replaceById
+
+    const data: AnyObject = new this.entityClass(entity);
+
+    const def = this.entityClass.definition;
+    for (const r in def.relations) {
+      const relName = def.relations[r].name;
+      if (relName in data) {
+        throw new Error(
+          `Navigational properties are not allowed in model data (model "${this.entityClass.modelName}" property "${relName}")`,
+        );
+      }
+    }
+    if (options.replacement === true) {
+      const idProperty = this.entityClass.getIdProperties()[0];
+      if (idProperty) {
+        delete data[idProperty];
+      }
+    }
+    return data;
   }
 
   /**
