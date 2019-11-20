@@ -34,14 +34,18 @@ In the constructor, add the component to your application:
 this.component(LoggingComponent);
 ```
 
-The component contributes bindings with keys listed below:
+The component contributes bindings with keys declared in `LoggingBindings`
+namespace below:
 
-- LoggingBindings.FLUENT_SENDER - A fluent sender
-- LoggingBindings.WINSTON_LOGGER - A winston logger
-- LoggingBindings.WINSTON_TRANSPORT_FLUENT - A fluent transport for winston
+- FLUENT_SENDER - A fluent sender
+- WINSTON_LOGGER - A winston logger
+- WINSTON_TRANSPORT_FLUENT - A fluent transport for winston
+- WINSTON_INTERCEPTOR - A local interceptor set by `@log` to log method
+  invocations
+- WINSTON_ACCESS_LOGGER - A global interceptor that logs http access
 
 The fluent sender and transport for winston can be configured against
-`LoggingBindings.FLUENT_SENDER`:
+`FLUENT_SENDER`:
 
 ```ts
 import {LoggingBindings} from '@loopback/extension-logging';
