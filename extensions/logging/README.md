@@ -11,6 +11,10 @@ This module contains a component provides logging facilities based on
 > using `0.x.y` versions. Their APIs and functionality may be subject to
 > breaking changes in future releases.
 
+## Architecture overview
+
+![logging-component](logging-component.png)
+
 ## Installation
 
 ```sh
@@ -34,6 +38,37 @@ In the constructor, add the component to your application:
 this.component(LoggingComponent);
 ```
 
+Now your application can add a controller as follows to leverage the logging
+facilities:
+
+```ts
+import {inject} from '@loopback/context';
+import {Logger} from '@loopback/extension-logging';
+
+class MyController {
+  // Inject a winston logger
+  @inject(LoggingBindings.WINSTON_LOGGER)
+  private logger: Logger;
+
+  // http access is logged by a global interceptor
+  @get('/greet/{name}')
+  // log the `greet` method invocations
+  @log()
+  greet(@param.path.string('name') name: string) {
+    return `Hello, ${name}`;
+  }
+
+  @get('/hello/{name}')
+  hello(@param.path.string('name') name: string) {
+    // Use the winston logger explicitly
+    this.logger.log('info', `greeting ${name}`);
+    return `Hello, ${name}`;
+  }
+}
+```
+
+## Configure the logging component
+
 The component contributes bindings with keys declared in `LoggingBindings`
 namespace below:
 
@@ -42,7 +77,8 @@ namespace below:
 - WINSTON_TRANSPORT_FLUENT - A fluent transport for winston
 - WINSTON_INTERCEPTOR - A local interceptor set by `@log` to log method
   invocations
-- WINSTON_ACCESS_LOGGER - A global interceptor that logs http access
+- WINSTON_ACCESS_LOGGER - A global interceptor that logs http access with
+  [Morgan](https://github.com/expressjs/morgan) format
 
 The fluent sender and transport for winston can be configured against
 `FLUENT_SENDER`:
@@ -91,6 +127,13 @@ ctx
   .bind('logging.winston.formats.colorize')
   .to(format.colorize())
   .apply(extensionFor(WINSTON_FORMAT));
+```
+
+The access log interceptor can also be configured to customize
+[Morgan format and options](https://github.com/expressjs/morgan#morganformat-options):
+
+```
+ctx.configure(LoggingBindings.WINSTON_ACCESS_LOGGER).to({format: 'combined'});
 ```
 
 ## Contributions
