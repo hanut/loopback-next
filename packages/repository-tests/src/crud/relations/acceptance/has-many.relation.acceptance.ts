@@ -247,6 +247,23 @@ export function hasManyRelationAcceptance(
       ).to.be.rejectedWith(/Navigational properties are not allowed.*"orders"/);
     });
 
+    it('throws when the instance contains navigational property when operates delete()', async () => {
+      const customer = await customerRepo.create({name: 'customer'});
+
+      await orderRepo.create({
+        description: 'pizza',
+        customerId: customer.id,
+      });
+
+      const found = await customerRepo.findById(customer.id, {
+        include: [{relation: 'orders'}],
+      });
+
+      await expect(customerRepo.delete(found)).to.be.rejectedWith(
+        'Navigational properties are not allowed in model data (model "Customer" property "orders")',
+      );
+    });
+
     context('when targeting the source model', () => {
       it('gets the parent entity through the child entity', async () => {
         const parent = await customerRepo.create({name: 'parent customer'});

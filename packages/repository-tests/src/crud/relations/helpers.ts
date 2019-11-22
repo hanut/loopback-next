@@ -30,6 +30,9 @@ export function givenBoundCrudRepositories(
   Order.definition.properties.id.type = features.idType;
   Address.definition.properties.id.type = features.idType;
   Customer.definition.properties.id.type = features.idType;
+  Customer.definition.properties.id.mongodb = {
+    dataType: 'ObjectID',
+  };
   Shipment.definition.properties.id.type = features.idType;
   // when running the test suite on MongoDB, we don't really need to setup
   // this config for mongo connector to pass the test.

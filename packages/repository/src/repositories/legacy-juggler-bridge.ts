@@ -420,7 +420,8 @@ export class DefaultCrudRepository<
     return this.updateById(entity.getId(), entity, options);
   }
 
-  delete(entity: T, options?: Options): Promise<void> {
+  async delete(entity: T, options?: Options): Promise<void> {
+    this.ensurePersistable(entity);
     return this.deleteById(entity.getId(), options);
   }
 
@@ -456,7 +457,7 @@ export class DefaultCrudRepository<
     options?: Options,
   ): Promise<void> {
     try {
-      const payload = this.ensurePersistable(data, {replacement: true});
+      const payload = this.ensurePersistable(data);
       await ensurePromise(this.modelClass.replaceById(id, payload, options));
     } catch (err) {
       if (err.statusCode === 404) {
@@ -536,15 +537,13 @@ export class DefaultCrudRepository<
 
   /** Converts an entity object to a JSON object to check if it contains navigational property.
    * Throws an error if `entity` contains navigational property.
-   * Also removed id property  for replaceById operation (mongo use case).
    *
    * @param entity
-   * @param options when attributw replacement is set to true, delete the id property to operate
-   * replaceById method.
+   * @param options
    */
   protected ensurePersistable<R extends T>(
     entity: R | DataObject<R>,
-    options: {replacement?: boolean; idProperty?: string} = {},
+    options: {},
   ): legacy.ModelData<legacy.PersistedModel> {
     // FIXME(bajtos) Ideally, we should call toJSON() to convert R to data object
     // Unfortunately that breaks replaceById for MongoDB connector, where we
@@ -569,12 +568,12 @@ export class DefaultCrudRepository<
         );
       }
     }
-    if (options.replacement === true) {
-      const idProperty = this.entityClass.getIdProperties()[0];
-      if (idProperty) {
-        delete data[idProperty];
-      }
-    }
+    // if (options.replacement === true) {
+    //   const idProperty = this.entityClass.getIdProperties()[0];
+    //   if (!data[idProperty] === undefined) {
+    //     throw new Error(`id property should not be included in ${data}`);
+    //   }
+    // }
     return data;
   }
 
