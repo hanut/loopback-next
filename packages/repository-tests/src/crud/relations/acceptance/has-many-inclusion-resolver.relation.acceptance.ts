@@ -246,9 +246,8 @@ export function hasManyInclusionResolverAcceptance(
         include: [{relation: 'orders'}],
       });
       const expected = [
-        {...thor, parentId: features.emptyValue},
         {
-          ...odin,
+          ...thor,
           parentId: features.emptyValue,
           orders: [
             {
@@ -259,6 +258,7 @@ export function hasManyInclusionResolverAcceptance(
             },
           ],
         },
+        {...odin, parentId: features.emptyValue},
       ];
       expect(toJSON(result)).to.deepEqual(toJSON(expected));
     });
