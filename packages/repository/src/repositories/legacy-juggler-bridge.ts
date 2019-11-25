@@ -339,19 +339,18 @@ export class DefaultCrudRepository<
   }
 
   async create(entity: DataObject<T>, options?: Options): Promise<T> {
-    const model = await ensurePromise(
-      this.modelClass.create(this.ensurePersistable(entity), options),
-    );
+    // perform persist hook
+    const data = await this.entityToData(entity, options);
+    const model = await ensurePromise(this.modelClass.create(data, options));
     return this.toEntity(model);
   }
 
   async createAll(entities: DataObject<T>[], options?: Options): Promise<T[]> {
-    const models = await ensurePromise(
-      this.modelClass.create(
-        entities.map(e => this.ensurePersistable(e)),
-        options,
-      ),
+    // perform persist hook
+    const data = await Promise.all(
+      entities.map(e => this.entityToData(e, options)),
     );
+    const models = await ensurePromise(this.modelClass.create(data, options));
     return this.toEntities(models);
   }
 
@@ -421,7 +420,8 @@ export class DefaultCrudRepository<
   }
 
   async delete(entity: T, options?: Options): Promise<void> {
-    this.ensurePersistable(entity);
+    // perform persist hook
+    await this.entityToData(entity, options);
     return this.deleteById(entity.getId(), options);
   }
 
@@ -431,8 +431,9 @@ export class DefaultCrudRepository<
     options?: Options,
   ): Promise<Count> {
     where = where || {};
+    const persistedData = await this.entityToData(data, options);
     const result = await ensurePromise(
-      this.modelClass.updateAll(where, this.ensurePersistable(data), options),
+      this.modelClass.updateAll(where, persistedData, options),
     );
     return {count: result.count};
   }
@@ -457,7 +458,7 @@ export class DefaultCrudRepository<
     options?: Options,
   ): Promise<void> {
     try {
-      const payload = this.ensurePersistable(data);
+      const payload = await this.entityToData(data, options);
       await ensurePromise(this.modelClass.replaceById(id, payload, options));
     } catch (err) {
       if (err.statusCode === 404) {
@@ -533,6 +534,14 @@ export class DefaultCrudRepository<
     options?: Options,
   ): Promise<(T & Relations)[]> {
     return includeRelatedModels<T, Relations>(this, entities, include, options);
+  }
+
+  protected async entityToData<R extends T>(
+    entity: R | DataObject<R>,
+    options = {},
+  ): Promise<legacy.ModelData<legacy.PersistedModel>> {
+    this.ensurePersistable(entity, options);
+    return entity;
   }
 
   /** Converts an entity object to a JSON object to check if it contains navigational property.
