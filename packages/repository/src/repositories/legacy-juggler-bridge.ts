@@ -543,7 +543,7 @@ export class DefaultCrudRepository<
    */
   protected ensurePersistable<R extends T>(
     entity: R | DataObject<R>,
-    options: {},
+    options = {},
   ): legacy.ModelData<legacy.PersistedModel> {
     // FIXME(bajtos) Ideally, we should call toJSON() to convert R to data object
     // Unfortunately that breaks replaceById for MongoDB connector, where we
