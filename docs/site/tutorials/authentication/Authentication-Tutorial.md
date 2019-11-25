@@ -88,11 +88,11 @@ application, follow these steps:
 
    ```json
    {
-   "id": "1",
-   "email": "user1@example.com",
-   "password": "thel0ngp@55w0rd",
-   "firstName": "User",
-   "lastName": "One"
+     "id": "5dd6acee242760334f6aef65",
+     "email": "user1@example.com",
+     "password": "thel0ngp@55w0rd",
+     "firstName": "User",
+     "lastName": "One"
    }
    ```
 
@@ -103,7 +103,7 @@ application, follow these steps:
 
    ```json
    {
-     "email":    "user1@example.com",
+     "email": "user1@example.com",
      "password": "thel0ngp@55w0rd"
    }
    ```
@@ -164,7 +164,7 @@ application, follow these steps:
    The response is:
 
    ```json
-   {"id":"1","name":"User One"}
+   {"id": "5dd6acee242760334f6aef65", "name": "User One"}
    ```
 
 ## Adding JWT Authentication to a LoopBack 4 Application
@@ -768,6 +768,27 @@ In the `UserController` class in the
 users can be added by performing a `POST` request to the `/users` endpoint which
 is handled by the `create()` function.
 
+Because user credentials like password are stored outside of the main user
+profile, we need to create a new model (a
+[Data Transfer Object](https://en.wikipedia.org/wiki/Data_transfer_object)) to
+describe data required to create a new user. The class inherits from `User`
+model to include all user profile properties, and adds a new property `password`
+allowing clients to specify the password too.
+
+```ts
+@model()
+export class NewUserRequest extends User {
+  @property({
+    type: 'string',
+    required: true,
+  })
+  password: string;
+}
+```
+
+The controller method `UserController.create` then has to remove additional
+properties like `password` before passing the data to Repository (and database).
+
 ```ts
 export class UserController {
   constructor(
@@ -784,16 +805,35 @@ export class UserController {
   // ...
 
   @post('/users')
-  async create(@requestBody() user: User): Promise<User> {
+  async create(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(NewUserRequest, {
+            title: 'NewUser',
+          }),
+        },
+      },
+    })
+    newUserRequest: Omit<NewUserRequest, 'id'>,
+  ): Promise<User> {
     // ensure a valid email value and password value
-    validateCredentials(_.pick(user, ['email', 'password']));
+    validateCredentials(_.pick(newUserRequest, ['email', 'password']));
 
     // encrypt the password
-    user.password = await this.passwordHasher.hashPassword(user.password);
+    const password = await this.passwordHasher.hashPassword(
+      newUserRequest.password,
+    );
 
     // create the new user
-    const savedUser = await this.userRepository.create(user);
-    delete savedUser.password;
+    const savedUser = await this.userRepository.create(
+      _.omit(newUserRequest, 'password'),
+    );
+
+    // set the password
+    await this.userRepository
+      .userCredentials(savedUser.id)
+      .create({password});
 
     return savedUser;
   }
